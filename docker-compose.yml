@@ -1,8 +1,9 @@
 services:
   yue-exllamav2-interface:
-    image: alissonpereiraanjos/yue-exllamav2-interface:latest  # Docker image for YuE Interface
-    container_name: yue-exllamav2-interface  # Name of the container
-    restart: unless-stopped  # Restart policy: always restart unless manually stopped
+    build: .
+    image: yue-exllamav2-interface  # Docker image for YuE Interface, default was alissonpereiraanjos/yue-exllamav2-interface:latest
+    container_name: YuE-exllamav2  # Name of the container
+    # restart: unless-stopped  # Restart policy: always restart unless manually stopped
     ports:
       - "7860:7860"  # Map port 7860 (Gradio UI) to the host
       #- "8888:8888"  # Optional: Map an additional port (e.g., for other services)

@@ -312,7 +312,7 @@ def generate_song(
         "--genre_txt", f"'{genre_txt_path}'",
         "--lyrics_txt", f"'{lyrics_txt_path}'",
         "--run_n_segments", str(run_n_segments),
-        # "--stage2_batch_size", str(stage2_batch_size),
+        "--stage2_batch_size", str(stage2_batch_size),
         "--output_dir", f"'{output_dir}'",
         "--cuda_idx", str(cuda_idx),
         "--seed", f"{seed}",
@@ -559,11 +559,10 @@ def build_gradio_interface():
             )
             
             stage2_batch_size = gr.Number(
-                label="Stage2 Batch Size",
-                value=4,
+                label="Stage2 Batch Size (4 is default, 5 is good for cot on rtx4090, but lower it for icl)",
+                value=5,
                 precision=0,
                 info="The batch size used in Stage 2 inference.",
-                visible=False
             )
             output_dir = gr.Textbox(
                 label="Output Directory",

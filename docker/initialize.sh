@@ -37,9 +37,12 @@ mkdir -p /workspace
 echo "Copying YuE-exllamav2-UI to /workspace..."
 cp -rf /YuE-exllamav2-UI  /workspace/
 
-echo "Updating YuE-exllamav2-UI ..."
-cd /workspace/YuE-exllamav2-UI 
-git pull --verbose
+# the initial image of this was meant to be turnkey, so it
+# always grabbed an update of the code. but i dont want it
+# to do that. 
+#echo "Updating YuE-exllamav2-UI ..."
+#cd /workspace/YuE-exllamav2-UI 
+#git pull --verbose
 
 cp -f /entrypoint.sh /workspace/entrypoint.sh
 
