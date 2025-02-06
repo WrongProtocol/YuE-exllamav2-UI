@@ -15,6 +15,8 @@ ENV PYTHON_VERSION=3.12
 ENV CONDA_DIR=/opt/conda
 ENV PATH="$CONDA_DIR/bin:$PATH"
 # ENV NUM_GPUS=1
+
+#overridden in in docker-compose
 ENV DOWNLOAD_MODELS="all"
 
 # Install dependencies required for Miniconda

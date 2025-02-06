@@ -1,21 +1,27 @@
-version: '3.8'
-
 services:
-  yue-exllamav2-interface :
+  yue-exllamav2-interface:
     image: alissonpereiraanjos/yue-exllamav2-interface:latest  # Docker image for YuE Interface
     container_name: yue-exllamav2-interface  # Name of the container
     restart: unless-stopped  # Restart policy: always restart unless manually stopped
     ports:
       - "7860:7860"  # Map port 7860 (Gradio UI) to the host
-      - "8888:8888"  # Optional: Map an additional port (e.g., for other services)
+      #- "8888:8888"  # Optional: Map an additional port (e.g., for other services)
     environment:
-      - DOWNLOAD_MODELS=all  # Download all models. Replace "all" with specific model keys if needed.
-                             # Example: DOWNLOAD_MODELS=YuE-s2-1B-general,YuE-s1-7B-anneal-en-cot
+      - NVIDIA_VISIBLE_DEVICES=all  # Expose all GPUs
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility  # Enable CUDA support
+      - DOWNLOAD_MODELS=YuE-s2-1B-general,YuE-s1-7B-anneal-en-cot,YuE-s1-7B-anneal-en-icl,YuE-upsampler # set to all to get all models. Replace "all" with specific model keys if needed.
+                                                                                          # Example: DOWNLOAD_MODELS=YuE-s2-1B-general,YuE-s1-7B-anneal-en-cot
     volumes:
-      - /path/to/models:/workspace/models  # Map the host's model directory to the container
-      - /path/to/outputs:/workspace/outputs  # Map the host's output directory to the container
+      - yue-exllama-models:/workspace/models  # Map the host's model directory to the container
+      - yue-exllama-outputs:/workspace/outputs  # Map the host's output directory to the container
     deploy:
       resources:
         reservations:
           devices:
-            - capabilities: [gpu]  # Enable GPU support (requires NVIDIA GPU and drivers)
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]  # Enable GPU support (requires NVIDIA GPU and drivers)
+
+volumes:
+  yue-exllama-models:  # Define named volume
+  yue-exllama-outputs:  # Define named volume
