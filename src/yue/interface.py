@@ -524,7 +524,7 @@ def build_gradio_interface():
 
             run_n_segments = gr.Number(
                 label="Number of Segments",
-                value=2,
+                value=4,
                 precision=0,
                 info="Set Number of Segments to the number of lyric sections if you want to generate a full song. Additionally, you can increase Stage2 Batch Size based on your available GPU memory."
             )
@@ -544,8 +544,8 @@ def build_gradio_interface():
             )
             
             stage2_cache_size = gr.Number(
-                label="Stage2 Cache Size",
-                value=8192,
+                label="Stage2 Cache Size (8192, 16384)",
+                value=16384,
                 precision=0,
                 info="The cache size used in Stage 2 inference."
             )
@@ -559,8 +559,8 @@ def build_gradio_interface():
             )
             
             stage2_batch_size = gr.Number(
-                label="Stage2 Batch Size (4 is default, 5 is good for cot on rtx4090, but lower it for icl)",
-                value=5,
+                label="Stage2 Batch Size (4 is default, 5 is good for cot on rtx4090, but raise it for icl (15?))",
+                value=15,
                 precision=0,
                 info="The batch size used in Stage 2 inference.",
             )
