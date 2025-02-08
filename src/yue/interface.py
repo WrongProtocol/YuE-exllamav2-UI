@@ -538,14 +538,14 @@ def build_gradio_interface():
             stage1_cache_mode = gr.Dropdown(
                 label="Stage1 Cache Mode",
                 choices=["FP16", "Q8", "Q6", "Q4"],
-                value="FP16",
+                value="Q8",
                 interactive=True,
                 info="The cache mode used in Stage 1 inference (FP16, Q8, Q6, Q4). Quantized k/v cache will save VRAM at the cost of some speed and precision."
             )
             
             stage2_cache_size = gr.Number(
                 label="Stage2 Cache Size (8192, 16384)",
-                value=16384,
+                value=32768,
                 precision=0,
                 info="The cache size used in Stage 2 inference."
             )
@@ -559,8 +559,8 @@ def build_gradio_interface():
             )
             
             stage2_batch_size = gr.Number(
-                label="Stage2 Batch Size (4 is default, 5 is good for cot on rtx4090, but raise it for icl (15?))",
-                value=15,
+                label="Stage2 Batch Size (4 is default)",
+                value=20,
                 precision=0,
                 info="The batch size used in Stage 2 inference.",
             )
