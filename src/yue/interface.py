@@ -100,6 +100,9 @@ audio_path_queue = queue.Queue()
 process_dict = {}
 process_lock = threading.Lock()
 
+# Global flag to cancel a generation loop if needed
+generation_loop_cancel = False
+
 def load_and_process_genres(json_path):
     """
     Loads JSON data, processes genres, timbres, genders, moods, and instruments,
@@ -133,7 +136,6 @@ function createLink() {
     document.getElementById("tags_link").href = tagLink;
 }
 """
-
 
 custom_log_box_css = """
 #log_box textarea {
@@ -386,6 +388,85 @@ def update_logs(current_logs):
         new_text += log_queue.get()
     return current_logs + new_text
 
+def run_generation_loop(
+    stage1_model,
+    stage1_model_quantization,
+    stage2_model,
+    stage2_model_quantization,
+    tokenizer_model,
+    genre_txt_path,
+    lyrics_txt_path,
+    run_n_segments,
+    stage2_batch_size,
+    output_dir,
+    cuda_idx,
+    max_new_tokens,
+    seed,
+    use_audio_prompt,
+    audio_prompt_file,
+    prompt_start_time,
+    prompt_end_time,
+    use_dual_tracks_prompt,
+    vocal_track_prompt_file,
+    instrumental_track_prompt_file,
+    prompt_start_time_2,
+    prompt_end_time_2,
+    disable_offload_model,
+    keep_intermediate,
+    custom_filename,
+    stage1_cache_size,
+    stage1_cache_mode,
+    stage2_cache_size,
+    stage2_cache_mode,
+    num_generations
+):
+    """Runs the generation process consecutively for the specified number of generations."""
+    global generation_loop_cancel
+    for i in range(int(num_generations)):
+        if generation_loop_cancel:
+            log_queue.put("Generation loop cancelled.\n")
+            break
+        log_queue.put(f"Starting generation {i+1} of {num_generations}\n")
+        msg, pid = generate_song(
+            stage1_model,
+            stage1_model_quantization,
+            stage2_model,
+            stage2_model_quantization,
+            tokenizer_model,
+            genre_txt_path,
+            lyrics_txt_path,
+            run_n_segments,
+            stage2_batch_size,
+            output_dir,
+            cuda_idx,
+            max_new_tokens,
+            seed,
+            use_audio_prompt,
+            audio_prompt_file,
+            prompt_start_time,
+            prompt_end_time,
+            use_dual_tracks_prompt,
+            vocal_track_prompt_file,
+            instrumental_track_prompt_file,
+            prompt_start_time_2,
+            prompt_end_time_2,
+            disable_offload_model,
+            keep_intermediate,
+            custom_filename,
+            stage1_cache_size,
+            stage1_cache_mode,
+            stage2_cache_size,
+            stage2_cache_mode
+        )
+        # Wait until the current process finishes by checking process_dict
+        while True:
+            with process_lock:
+                if pid not in process_dict:
+                    break
+            time.sleep(1)
+        log_queue.put(f"Generation {i+1} complete.\n")
+    log_queue.put("All generations completed.\n")
+
 def build_gradio_interface():
     theme = gr.themes.Base()
     with gr.Blocks(title="YuE Exllamav2: Open Full-song Generation Foundation Model", theme=theme, css=custom_log_box_css) as demo:
@@ -487,9 +568,9 @@ def build_gradio_interface():
                             
                         **Notice:**
                         1. A suitable [Genre] tag consists of five components: genre, instrument, mood, gender, and timbre. All five should be included if possible, separated by spaces. The values of timbre should include "vocal" (e.g., "bright vocal").
-
+            
                         2. The order of the tags is flexible. For example, a stable genre control string might look like: "[Genre] inspiring female uplifting pop airy vocal electronic bright vocal vocal."
-
+            
                         3. Additionally, we have introduced the "Mandarin" and "Cantonese" tags to distinguish between Mandarin and Cantonese, as their lyrics often share similarities.
                         """)
                    
@@ -528,9 +609,18 @@ def build_gradio_interface():
                 precision=0,
                 info="Set Number of Segments to the number of lyric sections if you want to generate a full song. Additionally, you can increase Stage2 Batch Size based on your available GPU memory."
             )
+            
+            # New field for number of generations to run consecutively.
+            num_generations = gr.Number(
+                label="Number of Generations",
+                value=1,
+                precision=0,
+                info="The number of consecutive generations to run."
+            )
+            
             stage1_cache_size = gr.Number(
                 label="Stage1 Cache Size",
-                value=16384,
+                value=8192,
                 precision=0,
                 info="The cache size used in Stage 1 inference."
             )
@@ -538,7 +628,7 @@ def build_gradio_interface():
             stage1_cache_mode = gr.Dropdown(
                 label="Stage1 Cache Mode",
                 choices=["FP16", "Q8", "Q6", "Q4"],
-                value="Q8",
+                value="FP16",
                 interactive=True,
                 info="The cache mode used in Stage 1 inference (FP16, Q8, Q6, Q4). Quantized k/v cache will save VRAM at the cost of some speed and precision."
             )
@@ -593,7 +683,6 @@ def build_gradio_interface():
                 value=False,
                 info="If set, intermediate outputs will be saved during processing."
             )
-            
             
               
             gr.Markdown(f"""
@@ -831,14 +920,13 @@ Note:
             stage1_cache_size,
             stage1_cache_mode,
             stage2_cache_size,
-            stage2_cache_mode
-            # use_mmgp,
-            # mmgp_profile,
-            # use_sdpa,
-            # use_torch_compile,
-            # use_transformers_patch
+            stage2_cache_mode,
+            num_generations
         ):
             """Triggered when user clicks 'Generate Music'."""
+            global generation_loop_cancel
+            generation_loop_cancel = False  # Reset cancellation flag
+
             # Check if a process is already running
             with process_lock:
                 if process_dict:
@@ -859,47 +947,81 @@ Note:
             genre_tmp_path = write_temp_file(genre_text, ".txt")
             lyrics_tmp_path = write_temp_file(lyrics_text, ".txt")
 
-            msg, pid = generate_song(
-                stage1_model,
-                stage1_model_quantization,
-                stage2_model,
-                stage2_model_quantization,
-                tokenizer_model,
-                genre_tmp_path,
-                lyrics_tmp_path,
-                run_n_segments,
-                stage2_batch_size,
-                output_dir,
-                cuda_idx,
-                max_new_tokens,
-                seed,
-                use_audio_prompt,
-                audio_prompt_file,
-                prompt_start_time,
-                prompt_end_time,
-                use_dual_tracks_prompt,
-                vocal_track_prompt_file,
-                instrumental_track_prompt_file,
-                prompt_start_time_2,
-                prompt_end_time_2,
-                disable_offload_model,
-                keep_intermediate,
-                custom_filename,
-                stage1_cache_size,
-                stage1_cache_mode,
-                stage2_cache_size,
-                stage2_cache_mode
-                # use_mmgp,
-                # mmgp_profile,
-                # use_sdpa,
-                # use_torch_compile,
-                # use_transformers_patch
-            )
-            # If the generation started successfully, hide "Generate" and show "Stop"
-            if pid:
-                return (msg, pid, gr.update(visible=False), gr.update(visible=True))
+            if int(num_generations) == 1:
+                msg, pid = generate_song(
+                    stage1_model,
+                    stage1_model_quantization,
+                    stage2_model,
+                    stage2_model_quantization,
+                    tokenizer_model,
+                    genre_tmp_path,
+                    lyrics_tmp_path,
+                    run_n_segments,
+                    stage2_batch_size,
+                    output_dir,
+                    cuda_idx,
+                    max_new_tokens,
+                    seed,
+                    use_audio_prompt,
+                    audio_prompt_file,
+                    prompt_start_time,
+                    prompt_end_time,
+                    use_dual_tracks_prompt,
+                    vocal_track_prompt_file,
+                    instrumental_track_prompt_file,
+                    prompt_start_time_2,
+                    prompt_end_time_2,
+                    disable_offload_model,
+                    keep_intermediate,
+                    custom_filename,
+                    stage1_cache_size,
+                    stage1_cache_mode,
+                    stage2_cache_size,
+                    stage2_cache_mode
+                )
+                if pid:
+                    return (msg, pid, gr.update(visible=False), gr.update(visible=True))
+                else:
+                    return (msg, None, gr.update(visible=True), gr.update(visible=False))
             else:
-                return (msg, None, gr.update(visible=True), gr.update(visible=False))
+                # Spawn a background thread to run multiple generations consecutively.
+                threading.Thread(
+                    target=run_generation_loop,
+                    args=(
+                        stage1_model,
+                        stage1_model_quantization,
+                        stage2_model,
+                        stage2_model_quantization,
+                        tokenizer_model,
+                        genre_tmp_path,
+                        lyrics_tmp_path,
+                        run_n_segments,
+                        stage2_batch_size,
+                        output_dir,
+                        cuda_idx,
+                        max_new_tokens,
+                        seed,
+                        use_audio_prompt,
+                        audio_prompt_file,
+                        prompt_start_time,
+                        prompt_end_time,
+                        use_dual_tracks_prompt,
+                        vocal_track_prompt_file,
+                        instrumental_track_prompt_file,
+                        prompt_start_time_2,
+                        prompt_end_time_2,
+                        disable_offload_model,
+                        keep_intermediate,
+                        custom_filename,
+                        stage1_cache_size,
+                        stage1_cache_mode,
+                        stage2_cache_size,
+                        stage2_cache_mode,
+                        num_generations
+                    ),
+                    daemon=True
+                ).start()
+                return ("Generation loop started.", None, gr.update(visible=False), gr.update(visible=True))
 
         generate_button.click(
             fn=on_generate_click,
@@ -932,18 +1054,16 @@ Note:
                 stage1_cache_size,
                 stage1_cache_mode,
                 stage2_cache_size,
-                stage2_cache_mode
-                # use_mmgp,
-                # mmgp_profile,
-                # use_sdpa,
-                # use_torch_compile,
-                # use_transformers_patch
+                stage2_cache_mode,
+                num_generations  # Added number of generations input
             ],
             outputs=[log_box, generation_pid, generate_button, stop_button]
         )
 
         def on_stop_click(pid):
             """Triggered when the user clicks 'Stop'."""
+            global generation_loop_cancel
+            generation_loop_cancel = True  # Cancel any further generations in the loop
             status = stop_generation(pid)
             return (status, None, gr.update(visible=True), gr.update(visible=False))
 
