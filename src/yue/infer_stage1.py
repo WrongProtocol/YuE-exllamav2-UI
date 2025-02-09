@@ -24,8 +24,9 @@ from transformers.cache_utils import StaticCache
 @dataclass
 class SampleSettings:
     # Here is suggested decoding config
-    top_p = 0.93
-    temperature = 1
+    top_p = .89 # 0.93
+    top_k = 4
+    temperature = 1.25 # 1
     repetition_penalty = 1.0
     guidance_scale_seg0 = 1.5  # None to disable cfg
     guidance_scale = 1.2  # None to disable cfg
@@ -341,7 +342,7 @@ class Stage1Pipeline_EXL2(Stage1Pipeline):
 
         # Sample settings
         gen_settings = ExLlamaV2Sampler.Settings(
-            top_k=0, top_p=sample_settings.top_p, token_repetition_penalty=sample_settings.repetition_penalty, temperature=sample_settings.temperature
+            top_k=sample_settings.top_k, top_p=sample_settings.top_p, token_repetition_penalty=sample_settings.repetition_penalty, temperature=sample_settings.temperature
         )
         gen_settings.allow_tokens(self.tokenizer, [32002] + list(range(45334, 56722)))
 
