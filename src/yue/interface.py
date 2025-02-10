@@ -458,14 +458,26 @@ def run_generation_loop(
             stage2_cache_size,
             stage2_cache_mode
         )
-        # Wait until the current process finishes by checking process_dict
+        if pid is None:
+            log_queue.put("Failed to start generation.\n")
+            continue
+
+        # Wait until the current process finishes, but also allow cancellation
         while True:
             with process_lock:
-                if pid not in process_dict:
-                    break
+                running = pid in process_dict
+            if not running:
+                break
+            if generation_loop_cancel:
+                log_queue.put("Cancelling current generation...\n")
+                stop_generation(pid)
+                break
             time.sleep(1)
+        if generation_loop_cancel:
+            break
         log_queue.put(f"Generation {i+1} complete.\n")
     log_queue.put("All generations completed.\n")
+
 
 def build_gradio_interface():
     theme = gr.themes.Base()
