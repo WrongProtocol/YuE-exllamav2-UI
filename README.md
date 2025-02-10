@@ -1,3 +1,5 @@
+## note this is an out of date sandbox to play with YuE-exlammav2 with gradio, running in a docker, with some small tweaks for the sake of testing (such as launching multiple consecutive  renders with the same settings).    I most likely will not be maintaining this fork or prepping it for a merge, as it will be significanlty out of date and the changes were either too specific to my use, or are easy enough to re-implement in a future version without dealing with dozens of merges. 
+
 # YuE-Exllamav2-UI
 
 Welcome to **YuE-Exllamav2-UI**, the ultimate optimized interface for music generation using YuE models with **ExLlamaV2 acceleration**. This project delivers the best possible performance for YuE models, achieving exceptional speed and efficiency on modern NVIDIA GPUs like the RTX 4090 and RTX 3060.
