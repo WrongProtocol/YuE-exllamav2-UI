@@ -27,7 +27,7 @@ class SampleSettings:
     top_p = .89 # 0.93
     top_k = 4
     temperature = 1.25 # 1
-    repetition_penalty = 1.0
+    repetition_penalty = 1.1
     guidance_scale_seg0 = 1.5  # None to disable cfg
     guidance_scale = 1.2  # None to disable cfg
 
