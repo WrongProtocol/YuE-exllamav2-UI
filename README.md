@@ -1,5 +1,103 @@
 ## note this is an out of date sandbox to play with YuE-exlammav2 with gradio, running in a docker, with some small tweaks for the sake of testing (such as launching multiple consecutive  renders with the same settings).    I most likely will not be maintaining this fork or prepping it for a merge, as it will be significanlty out of date and the changes were either too specific to my use, or are easy enough to re-implement in a future version without dealing with dozens of merges. 
 
+
+# YuE ExLlama assessment 
+
+## Overview
+YuE ExLlama  is an advanced pipeline for generating high-quality audio from textual and/or audio prompts. The system operates in multiple stages, leveraging deep learning models and codec-based transformations to synthesize structured and coherent musical compositions. The project consists of several key components that handle different stages of audio processing, including inference, encoding, decoding, and post-processing.
+
+## System Components
+The system is structured into three primary stages:
+- **Stage 1:** Text and Audio Prompt Processing (`infer_stage1.py`)
+- **Stage 2:** Audio Token Refinement and Generation (`infer_stage2.py`)
+- **Post-Processing:** Audio Reconstruction and Mixing (`infer_postprocess.py`)
+
+Additionally, `interface.py` provides an interactive front-end using Gradio, and `infer.py` acts as the main execution script that orchestrates the inference process.
+
+---
+
+## Stage 1 - Text and Audio Prompt Processing
+**File:** `infer_stage1.py`
+
+Processes input prompts (text and/or audio), encodes them into a tokenized representation, and prepares them for audio synthesis.
+
+### Key Functions and Classes
+- **`load_audio_mono(filepath, sampling_rate=16000)`** - Loads an audio file, converts it to mono, and resamples if necessary.
+- **`encode_audio(codec_model, audio_prompt, device, target_bw=0.5)`** - Converts audio waveforms into a compressed token representation.
+- **`get_prompt_texts(genres, lyrics)`** - Processes genres and lyrics into structured prompts for inference.
+- **`get_audio_prompt_ids(...)`** - Extracts and encodes audio segments for in-context learning.
+- **`Stage1Pipeline`** - Handles codec model loading, encoding audio, and formatting data for Stage 2.
+
+**Output:** Intermediate `.npy` files stored in the `stage1` directory.
+
+---
+
+## Stage 2 - Audio Token Refinement and Generation
+**File:** `infer_stage2.py`
+
+Processes encoded audio tokens from Stage 1 through a model to refine and complete audio generation.
+
+### Key Functions and Classes
+- **`Stage2Pipeline`** - Loads tokenizer and codec tools for processing.
+- **`generate_batch(prompt, batch_size)`** - Generates refined audio tokens in batches.
+- **`fix_output(output)`** - Applies corrections to avoid out-of-range values.
+- **`save(output_dir, outputs)`** - Saves generated audio tokens as `.npy` files.
+
+**Output:** Refined tokens stored in the `stage2` directory.
+
+---
+
+## Post-Processing - Audio Reconstruction and Mixing
+**File:** `infer_postprocess.py`
+
+Reconstructs audio from generated tokens, applies enhancements, and mixes instrumental and vocal tracks.
+
+### Key Functions and Classes
+- **`save_audio(wav, path, sample_rate, rescale=False)`** - Saves processed audio.
+- **`post_process(...)`** - Converts tokens back into waveform audio, applies mixing, and enhances final output.
+- **`replace_low_freq_with_energy_matched(...)`** - Refines low-frequency content for better sound quality.
+
+**Output:** Final `.mp3` files stored in the output directory.
+
+---
+
+## Execution Flow
+**File:** `infer.py`
+
+Sequentially executes the three processing stages:
+1. Calls `infer_stage1.py` to process prompts.
+2. Calls `infer_stage2.py` to generate refined tokens.
+3. Calls `infer_postprocess.py` to generate and mix final audio.
+
+Ensures proper execution by handling arguments and failure checks.
+
+---
+
+## User Interface
+**File:** `interface.py`
+
+Provides a Gradio-based web interface for interacting with the model.
+
+### Features
+- Model selection for Stage 1 and Stage 2
+- Genre and lyrics input
+- Support for audio prompts
+- Parameter tuning (segments, max new tokens, cache settings)
+- Live logging and result preview
+- File explorer for downloading generated music
+
+---
+
+
+
+
+
+
+
+
+
+Original README is below. 
+
 # YuE-Exllamav2-UI
 
 Welcome to **YuE-Exllamav2-UI**, the ultimate optimized interface for music generation using YuE models with **ExLlamaV2 acceleration**. This project delivers the best possible performance for YuE models, achieving exceptional speed and efficiency on modern NVIDIA GPUs like the RTX 4090 and RTX 3060.
